@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract Degen is ERC20 {
+contract PayToken is ERC20 {
     uint8 private _decimals = 18;
 
     constructor(

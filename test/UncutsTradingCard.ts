@@ -1,5 +1,5 @@
 import { getAddress, parseGwei, parseEther, formatEther, Account } from "viem";
-// import * as ethers from "@nomicfoundation/hardhat-ethers"
+import {ethers } from 'hardhat'
 import {
   time,
   loadFixture,
@@ -23,8 +23,6 @@ const prizePoolFeeDestination = '0x0EA70bEdB155e55A09E841cbbADF1A479d260101'
 describe("UncutsTradingCard", function () {
 
   async function deployTradingCardFixture() {
-
-    let ethers = this.env.ethers
 
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount, thirdAccount, fourthAccount] = await ethers.getSigners();
@@ -738,7 +736,7 @@ describe("UncutsTradingCard", function () {
       await expect(uncutsTradingCard.releaseCardTo(otherAccount.address)).to.not.be.rejected;
 
       expect(await uncutsTradingCard.uri(1)).to.be.equal(
-        `${deployParams[2]}1${deployParams[3]}1`
+        `${metaDataPrefix}1${metaDataSuffix}1`
       )
 
         
