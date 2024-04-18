@@ -279,10 +279,8 @@ contract UncutsTradingCard is ERC1155, Ownable {
         uint256 supply,
         uint256 amount
     ) internal view returns (uint256) {
-        uint256 sum1 = supply == 0 ? 0 : getBondingCurvePrice(supply);
-        uint256 sum2 = supply == 0 && amount == 1
-            ? 0
-            : getBondingCurvePrice(supply + amount);
+        uint256 sum1 = getBondingCurvePrice(supply);
+        uint256 sum2 = getBondingCurvePrice(supply + amount);
         uint256 summation = (sum2 - sum1) / 100;
         return summation * 1 ether * BASE_PRICE_POINTS;
     }
@@ -291,6 +289,7 @@ contract UncutsTradingCard is ERC1155, Ownable {
         uint256 tokenId,
         uint256 amount
     ) public view returns (uint256) {
+        if (_totalSupply[tokenId] < 1) return 0;
         return getPrice(_totalSupply[tokenId], amount);
     }
 
@@ -298,6 +297,7 @@ contract UncutsTradingCard is ERC1155, Ownable {
         uint256 tokenId,
         uint256 amount
     ) public view returns (uint256) {
+        if (_totalSupply[tokenId] < 2) return 0;
         return getPrice(_totalSupply[tokenId] - amount, amount);
     }
 
