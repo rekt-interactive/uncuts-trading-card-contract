@@ -280,7 +280,6 @@ contract UncutsTradingCard is ERC1155, Ownable {
                     (6 * BASE_PRICE_POINTS) -
                     (3 * BASE_PRICE_POINTS * supply) -
                     (3 * BASE_PRICE_POINTS))) / 6;
-        // return ((supply ** 3) * 100) / 6;
     }
 
     function getPrice(
