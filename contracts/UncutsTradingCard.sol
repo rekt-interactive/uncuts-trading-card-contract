@@ -271,18 +271,28 @@ contract UncutsTradingCard is ERC1155, Ownable {
 
     function getBondingCurvePrice(
         uint256 supply
-    ) internal pure returns (uint256) {
-        return ((supply ** 3) * 100) / 6;
+    ) internal view returns (uint256) {
+        return
+            (supply *
+                ((BASE_PRICE_POINTS * supply ** 2) +
+                    (2 * BASE_PRICE_POINTS) +
+                    (3 * supply * BASE_PRICE_POINTS) +
+                    (6 * BASE_PRICE_POINTS) -
+                    (3 * BASE_PRICE_POINTS * supply) -
+                    (3 * BASE_PRICE_POINTS))) / 6;
+        // return ((supply ** 3) * 100) / 6;
     }
 
     function getPrice(
         uint256 supply,
         uint256 amount
     ) internal view returns (uint256) {
-        uint256 sum1 = getBondingCurvePrice(supply);
-        uint256 sum2 = getBondingCurvePrice(supply + amount);
-        uint256 summation = (sum2 - sum1) / 100;
-        return summation * 1 ether * BASE_PRICE_POINTS;
+        uint256 sum1 = supply == 0 ? 0 : getBondingCurvePrice(supply - 1);
+        uint256 sum2 = supply == 0 && amount == 1
+            ? 0
+            : getBondingCurvePrice(supply - 1 + amount);
+        uint256 summation = (sum2 - sum1);
+        return summation * 1 ether;
     }
 
     function getBuyPrice(
