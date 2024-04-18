@@ -289,7 +289,6 @@ contract UncutsTradingCard is ERC1155, Ownable {
         uint256 tokenId,
         uint256 amount
     ) public view returns (uint256) {
-        if (_totalSupply[tokenId] < 1) return 0;
         return getPrice(_totalSupply[tokenId], amount);
     }
 
@@ -297,7 +296,6 @@ contract UncutsTradingCard is ERC1155, Ownable {
         uint256 tokenId,
         uint256 amount
     ) public view returns (uint256) {
-        if (_totalSupply[tokenId] < 2) return 0;
         return getPrice(_totalSupply[tokenId] - amount, amount);
     }
 

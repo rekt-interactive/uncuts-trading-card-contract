@@ -484,6 +484,13 @@ describe("UncutsTradingCard", function () {
 
       expect(finalContractBalance).to.equals('0');
 
+      let lastSellPrice = await uncutsTradingCard.getSellPrice(1,1)
+
+      console.log('lastSellPrice', lastSellPrice)
+
+      let zeroBuyPrice = await uncutsTradingCard.getBuyPrice(2,1)
+
+      console.log('zeroBuyPrice', zeroBuyPrice)
 
     });
 
