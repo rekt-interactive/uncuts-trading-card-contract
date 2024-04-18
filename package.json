@@ -1,9 +1,13 @@
 {
   "name": "hardhat-project",
+  "scripts": {
+    "deploy:testnet": "npx hardhat run scripts/deploy-testnet.ts --network baseSepolia"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.5",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
     "hardhat": "^2.22.3",
     "viem": "^2.9.21"
   },

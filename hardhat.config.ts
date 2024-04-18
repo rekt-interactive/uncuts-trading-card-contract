@@ -3,12 +3,15 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ethers";
 require("@nomicfoundation/hardhat-chai-matchers")
 
+import dotenv from 'dotenv'
+
+dotenv.config()
+
+console.log(process.env)
+
 
 const accounts = [
-  vars.get(
-    "OWNER_PRIVATE_KEY",
-    "",
-  ),
+  process.env.OWNER_PRIVATE_KEY as string
 ];
 
 task("accounts", "Prints the list of accounts", async (_, hre) => {
@@ -35,7 +38,7 @@ task(
   },
 );
 
-console.log('BASE_API_KEY', vars.get("BASE_API_KEY", ""))
+console.log('BASE_API_KEY', process.env.BASE_API_KEY)
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -88,12 +91,12 @@ const config: HardhatUserConfig = {
     apiKey: {
       // For Ethereum testnets & mainnet
       mainnet: process.env.ETHERSCAN_API_KEY!,
-      goerli: vars.get("ETHERSCAN_API_KEY", ""),
-      sepolia: vars.get("ETHERSCAN_API_KEY", ""),
+      goerli: process.env.ETHERSCAN_API_KEY!,
+      sepolia: process.env.ETHERSCAN_API_KEY!,
       // For Base testnets & mainnet
-      base: vars.get("BASE_API_KEY", ""),
-      baseTestnet: vars.get("BASE_API_KEY", ""),
-      baseSepolia: vars.get("BASE_API_KEY", "")
+      base: process.env.BASE_API_KEY!,
+      baseTestnet: process.env.BASE_API_KEY!,
+      baseSepolia: process.env.BASE_API_KEY!
     },
     customChains: [
       {
