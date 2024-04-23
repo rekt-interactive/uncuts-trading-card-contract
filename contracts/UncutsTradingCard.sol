@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -10,46 +10,57 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
+/**
+ * @title Uncuts Trading Card AMM
+ * @dev Contract for managing trading cards using ERC1155 standard with additional functionalities.
+ */
 contract UncutsTradingCard is ERC1155, Ownable {
     using Strings for uint256;
     using SafeERC20 for IERC20;
 
+    /// @notice Trading Card Token name
     string public name = "TradingCard";
+
+    /// @notice Trading Card Token symbol
     string public symbol = "TC";
 
-    error TradingCard__Unauthorized(bytes32 reason, address caller);
-    error TradingCard__PublicReleaseDisabled();
-    error TradingCard__CardNotReleased();
-
-    error TradingCard__ContractIsPaused();
-    error TradingCard__EpochNotEnded();
-    error TradingCard_OnlyAdmin();
-
     //private vars
+    /// @dev Card Release ID counter
     uint256 private _tokenIdCount = 0;
+
+    /// @dev Card Release Authors storage
     mapping(uint256 => address) private _tokenAuthors;
+
+    /// @dev Card Release total supplies storage
     mapping(uint256 => uint256) private _totalSupply;
 
-    uint256 private MIN_HOLDING_TIME = 60;
-    mapping(address holder => uint256 blockTimestamp) internal purchaseTime;
-
+    /// @dev This variable using to calculate card price
     uint128 private BASE_PRICE_POINTS = 1000;
 
+    /// @dev Admin has permission to release cards
     address private _admin = msg.sender;
 
-    string _metadataBaseUrlPrefix = "";
-    string _metadataBaseUrlSuffix = "";
-    string _contractMetadataUrl = "";
+    string private _metadataBaseUrlPrefix = "";
+    string private _metadataBaseUrlSuffix = "";
+    string private _contractMetadataUrl = "";
 
     //public vars
-    uint256 public protocolReleaseCardFee = 0.005 ether; //absolute amount of eth required to mint first card
+    /// @notice absolute amount of eth required to mint first card (only for public release)
+    uint256 public protocolReleaseCardFee = 0.005 ether;
 
+    /// @notice protocol fee for every trade in hundred thousand points. 2500 === 0.025 === 2.5%
     uint32 public protocolTradeCardFeePercent = 2500;
+
+    /// @notice prize pool fee for every trade in hundred thousand points. 2500 === 0.025 === 2.5%
     uint32 public prizePoolTradeCardFeePercent = 2500;
+
+    /// @notice author reward fee for every trade in hundred thousand points. 5000 === 0.05 === 5%
     uint32 public authorTradeCardFeePercent = 5000;
 
     bool public publicReleaseEnabled = false;
+
     address public protocolFeeDestination = msg.sender;
+
     address public prizePoolFeeDestination = msg.sender;
 
     bool public isPaused = false;
@@ -63,6 +74,10 @@ contract UncutsTradingCard is ERC1155, Ownable {
     uint256 public constant EPOCH_DURATION = 7 days;
 
     //events
+    /// New Card Released Event
+    /// @param author card release author address
+    /// @param tokenId new card release token id
+    /// @param amount the amount of new released cards (always 1)
     event Release(address author, uint256 tokenId, uint256 amount);
 
     event Buy(
@@ -93,23 +108,40 @@ contract UncutsTradingCard is ERC1155, Ownable {
 
     event EpochAdvanced(uint256 newEpoch);
 
+    //errors
+    error TradingCard__PublicReleaseDisabled();
+    error TradingCard__CardNotReleased();
+
+    error TradingCard__ContractIsPaused();
+    error TradingCard__EpochNotEnded();
+    error TradingCard_OnlyAdmin();
+
     /// @notice Ensures that the contract is not in a paused state.
     modifier whenNotPaused() {
         if (isPaused) revert TradingCard__ContractIsPaused();
         _;
     }
 
-    /// @notice Ensures that the contract is not in a paused state.
+    /// @notice Ensures that the public release is not in a disabled state.
     modifier whenPublicReleaseEnabled() {
         if (!publicReleaseEnabled) revert TradingCard__PublicReleaseDisabled();
         _;
     }
 
+    /// @notice Ensures that the caller is the admin.
     modifier onlyAdmin() {
         if (msg.sender != _admin) revert TradingCard_OnlyAdmin();
         _;
     }
 
+    //constructor
+    /// @notice UncutsTradingCard constructor
+    /// @param _name Name of the contract token
+    /// @param _symbol Symbol of the contract token
+    /// @param metadataBaseUrlPrefix Prefix of the metadata base url
+    /// @param metadataBaseUrlSuffix Suffix of the metadata base url
+    /// @param _payToken Address of the pay token
+    /// @param _BASE_PRICE_POINTS Base price points
     constructor(
         string memory _name,
         string memory _symbol,
@@ -126,6 +158,11 @@ contract UncutsTradingCard is ERC1155, Ownable {
         BASE_PRICE_POINTS = _BASE_PRICE_POINTS;
     }
 
+    /**
+     * @notice Returns the URI of a token
+     * @param tokenId uint256
+     * @return string formatted URI of the token including token id and current epoch
+     */
     function uri(uint256 tokenId) public view override returns (string memory) {
         // Tokens minted above the supply cap will not have associated metadata.
         require(
@@ -220,10 +257,6 @@ contract UncutsTradingCard is ERC1155, Ownable {
 
     function setContractMetadataUrl(string memory newValue) public onlyOwner {
         _contractMetadataUrl = newValue;
-    }
-
-    function setMinHoldingTime(uint256 newValue) public onlyOwner {
-        MIN_HOLDING_TIME = newValue;
     }
 
     function setPause(bool state) public onlyOwner {

@@ -2,6 +2,7 @@ import { HardhatUserConfig, task, vars } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ethers";
 require("@nomicfoundation/hardhat-chai-matchers")
+import 'solidity-docgen'
 
 import dotenv from 'dotenv'
 
@@ -52,6 +53,9 @@ const config: HardhatUserConfig = {
       },
       evmVersion: "paris", // Prevent using the `PUSH0` opcode
     },
+  },
+  docgen: {
+    exclude: ['PayToken.sol']
   },
   networks: {
     base: {

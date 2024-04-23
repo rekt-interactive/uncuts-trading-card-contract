@@ -17,14 +17,14 @@ dotenv.config()
 
 async function main() {
 
-  const payToken = await ethers.deployContract("PayToken", ['UNCUTS', 'UNCUTS', 18]);
+  const payToken = await ethers.deployContract("PayToken", ['CUTS', 'CUTS', 18]);
 
   payToken.waitForDeployment();
 
   const payTokenAddress = await payToken.getAddress();
 
   console.log(
-    `UNCUTS pay token contract deployed to ${payTokenAddress}`
+    `CUTS pay token contract deployed to ${payTokenAddress}`
   );
 
   const constructorArgs = [
