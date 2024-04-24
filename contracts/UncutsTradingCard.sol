@@ -583,6 +583,8 @@ contract UncutsTradingCard is ERC1155, Ownable {
 
         require(supply > 0, "Card not released");
         require(amount > 0, "Minimum amount is 1");
+
+        //sell amount should always be less than supply. That means that last card in release will persist
         require(amount < supply, "Amount exceeds supply");
 
         uint256 balance = balanceOf(msg.sender, id);
