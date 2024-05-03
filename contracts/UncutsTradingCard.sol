@@ -9,12 +9,13 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @notice Uncuts Trading Card AMM Contract
  * @dev Contract for releasing, buying and selling trading cards using ERC1155 standard with ERC20 pay token as payment.
  */
-contract UncutsTradingCard is ERC1155, Ownable {
+contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
     using Strings for uint256;
     using SafeERC20 for IERC20;
 
@@ -351,14 +352,14 @@ contract UncutsTradingCard is ERC1155, Ownable {
         // generate new token id
         _tokenIdCount += 1;
 
-        // mint token
-        _mint(author, _tokenIdCount, 1, "");
-
         // connect token to author
         _tokenAuthors[_tokenIdCount] = author;
 
         // increment total supply
         _totalSupply[_tokenIdCount] += 1;
+
+        // mint token
+        _mint(author, _tokenIdCount, 1, "");
 
         emit Release(author, _tokenIdCount, 1);
 
@@ -376,6 +377,7 @@ contract UncutsTradingCard is ERC1155, Ownable {
         public
         whenNotPaused
         whenPublicReleaseEnabled
+        nonReentrant
         returns (uint256)
     {
         // Check if enough value to pay fee
@@ -499,6 +501,7 @@ contract UncutsTradingCard is ERC1155, Ownable {
     )
         public
         whenNotPaused
+        nonReentrant
         returns (
             uint256 price,
             uint256 protocolFee,
@@ -521,11 +524,28 @@ contract UncutsTradingCard is ERC1155, Ownable {
             "Price is too high"
         );
 
+        // Update total supply
+        supply = _totalSupply[id] = _totalSupply[id] += amount;
+
         // mint tokens
         _mint(_to, id, amount, "");
 
-        // Update total supply
-        supply = _totalSupply[id] = _totalSupply[id] += amount;
+        address tokenAuthor = _tokenAuthors[id];
+
+        payToken.safeTransferFrom(msg.sender, address(this), price);
+        payToken.safeTransferFrom(msg.sender, tokenAuthor, authorFee);
+
+        payToken.safeTransferFrom(
+            msg.sender,
+            protocolFeeDestination,
+            protocolFee
+        );
+
+        payToken.safeTransferFrom(
+            msg.sender,
+            prizePoolFeeDestination,
+            prizePoolFee
+        );
 
         emit Buy(
             msg.sender,
@@ -537,21 +557,6 @@ contract UncutsTradingCard is ERC1155, Ownable {
             prizePoolFee,
             authorFee,
             supply
-        );
-
-        address tokenAuthor = _tokenAuthors[id];
-
-        payToken.safeTransferFrom(msg.sender, address(this), price);
-        payToken.safeTransferFrom(msg.sender, tokenAuthor, authorFee);
-        payToken.safeTransferFrom(
-            msg.sender,
-            protocolFeeDestination,
-            protocolFee
-        );
-        payToken.safeTransferFrom(
-            msg.sender,
-            prizePoolFeeDestination,
-            prizePoolFee
         );
     }
 
@@ -572,6 +577,7 @@ contract UncutsTradingCard is ERC1155, Ownable {
     )
         public
         whenNotPaused
+        nonReentrant
         returns (
             uint256 price,
             uint256 protocolFee,
@@ -601,11 +607,18 @@ contract UncutsTradingCard is ERC1155, Ownable {
 
         require(minAmountReceive <= price, "Price is too low");
 
+        // Update total supply
+        supply = _totalSupply[id] = _totalSupply[id] - amount;
+
+        address tokenAuthor = _tokenAuthors[id];
+
         // mint tokens
         _burn(msg.sender, id, amount);
 
-        // Update total supply
-        supply = _totalSupply[id] = _totalSupply[id] - amount;
+        payToken.safeTransfer(_to, price);
+        payToken.safeTransfer(tokenAuthor, authorFee);
+        payToken.safeTransfer(protocolFeeDestination, protocolFee);
+        payToken.safeTransfer(prizePoolFeeDestination, prizePoolFee);
 
         emit Sell(
             msg.sender,
@@ -618,19 +631,14 @@ contract UncutsTradingCard is ERC1155, Ownable {
             authorFee,
             supply
         );
-
-        address tokenAuthor = _tokenAuthors[id];
-
-        payToken.safeTransfer(_to, price);
-        payToken.safeTransfer(tokenAuthor, authorFee);
-        payToken.safeTransfer(protocolFeeDestination, protocolFee);
-        payToken.safeTransfer(prizePoolFeeDestination, prizePoolFee);
     }
 
     /// @dev only admin can release cards to another address
     /// @param author card release author address
     /// @return new card release ID
-    function releaseCardTo(address author) public onlyAdmin returns (uint256) {
+    function releaseCardTo(
+        address author
+    ) public onlyAdmin nonReentrant returns (uint256) {
         return _releaseCard(author);
     }
 

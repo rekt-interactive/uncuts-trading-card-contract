@@ -221,6 +221,44 @@ describe("UncutsTradingCard", function () {
 
     });
 
+    it("Should reject if draining the contract via release reentrancy", async function () {
+      const { 
+        uncutsTradingCard, 
+        payToken,
+        otherAccount, 
+        protocolReleaseCardFee
+      } = await loadFixture(deployTradingCardFixture);
+
+      // Deploy attacker contract.
+      const attack_contract_release = await ethers.deployContract("Reentrancy_Attack_Release", [
+        uncutsTradingCard.target, 
+        payToken.target,
+      ]);
+
+      // Fund the attacker contract 
+      payToken.transfer(attack_contract_release.target, ethers.parseEther('10000'));
+
+      // The first card is released.
+      await uncutsTradingCard.releaseCardTo(otherAccount.address)
+      
+      const priceWithFeesFiveCards = await uncutsTradingCard.getBuyPriceAfterFee(1,5);
+      const priceWithoutFeesFiveCards = await uncutsTradingCard.getBuyPrice(1,5);
+      
+      await payToken.approve(uncutsTradingCard.target, priceWithFeesFiveCards)
+      await uncutsTradingCard.buy(otherAccount.address, 1, 5, priceWithFeesFiveCards)
+
+      // Uncuts contract balance equals the amount paid by the previous purchase of 5 cards.
+      // These are the funds that are going to be drained.
+      const uncutsBalance = await payToken.balanceOf(uncutsTradingCard.target);
+      expect(uncutsBalance).to.equal(priceWithoutFeesFiveCards);
+      
+      await uncutsTradingCard.setPublicReleaseStatus(true);
+     
+      // Perform the attack.
+      await expect(attack_contract_release.release_card()).to.be.rejectedWith('ReentrancyGuardReentrantCall()');
+
+    })
+
   });
 
   ///////////////////////////
@@ -277,7 +315,7 @@ describe("UncutsTradingCard", function () {
 
       await payToken.connect(otherAccount).approve(uncutsTradingCard.target, priceWithFees)
 
-      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, 1,1,priceWithFees)).to.be.rejectedWith(uncutsTradingCard, 'ERC20InsufficientBalance');
+      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, 1,1,priceWithFees)).to.be.rejectedWith('ERC20InsufficientBalance');
 
     });
 
@@ -559,6 +597,34 @@ describe("UncutsTradingCard", function () {
 
     });
 
+    it("Should revert if buy two cards with reentrancy", async function () {
+      const { 
+        uncutsTradingCard, 
+        payToken,
+        otherAccount, 
+        protocolReleaseCardFee
+      } = await loadFixture(deployTradingCardFixture);
+  
+      // Deploy attacker contract.
+      const attack_contract = await ethers.deployContract("Reentrancy_Attack", [
+        uncutsTradingCard.target, 
+        payToken.target,
+      ]);
+  
+      // The first card is released.
+      await uncutsTradingCard.releaseCardTo(otherAccount.address)
+      
+      // Prices for buying the first card after the release.
+      const priceWithFeesOneCard = await uncutsTradingCard.getBuyPriceAfterFee(1,1);
+  
+      // Fund the attacker contract with only twice the price (with fees) for the first card.
+      payToken.transfer(attack_contract.target, BigInt(Number(priceWithFeesOneCard)*2))
+  
+      // Perform the attack.
+      await expect(attack_contract.buy_card(1, 1, priceWithFeesOneCard)).to.be.rejectedWith('ReentrancyGuardReentrantCall()')
+
+    })
+
   });
 
   describe("Sell Cards", function () {
@@ -710,7 +776,7 @@ describe("UncutsTradingCard", function () {
         owner
       } = await loadFixture(deployTradingCardFixture);
 
-      await expect(uncutsTradingCard.advanceEpoch()).to.be.rejectedWith(uncutsTradingCard, 'TradingCard__EpochNotEnded');
+      await expect(uncutsTradingCard.advanceEpoch()).to.be.rejectedWith('TradingCard__EpochNotEnded');
         
     });
 
@@ -750,5 +816,7 @@ describe("UncutsTradingCard", function () {
     });
 
   })
+
+  
 
 })
