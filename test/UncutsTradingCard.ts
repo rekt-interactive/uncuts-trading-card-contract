@@ -240,14 +240,23 @@ describe("UncutsTradingCard", function () {
       //release card 1 to address A
       await expect(uncutsTradingCard.releaseCardTo(otherAccount.address)).to.not.be.rejected;
 
+      //release card 2 to address B
+      await expect(uncutsTradingCard.releaseCardTo(thirdAccount.address)).to.not.be.rejected;
+
+
+      //release card 3 to address A
+      await expect(uncutsTradingCard.releaseCardTo(otherAccount.address)).to.not.be.rejected;
+
       let price = await uncutsTradingCard.getBuyPriceAfterFee(1, 1);
 
       await payToken.transfer(otherAccount.address, BigInt(Number(price)*10))
 
       await payToken.connect(otherAccount).approve(uncutsTradingCard.target, price)
 
-      //try to buy card 1 from address B
+      //try to buy card 1 from author B
       await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, thirdAccount.address, 1, 1, price)).to.be.rejectedWith("Author has not card release with provided ID");
+      //try to buy card 3 from author B
+      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, thirdAccount.address, 3, 1, price)).to.be.rejectedWith("Author has not card release with provided ID");
 
     });
 
