@@ -14,7 +14,7 @@ const metaDataPrefix = 'https://www.uncuts.app/cards/releases/'
 
 const metaDataSuffix = '/metadata/'
 
-const basePrice = '250'
+const basePrice = parseEther('250')
 
 
 const prizePoolFeeDestination = '0x0EA70bEdB155e55A09E841cbbADF1A479d260101'
@@ -27,7 +27,7 @@ describe("UncutsTradingCard", function () {
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount, thirdAccount, fourthAccount] = await ethers.getSigners();
 
-    const protocolReleaseCardFee = parseEther("0.005");
+    const protocolReleaseCardFee = parseEther('5000');
 
     const protocolTradeCardFeePercent = 2500;
     const prizePoolTradeCardFeePercent = 2500;
@@ -140,6 +140,14 @@ describe("UncutsTradingCard", function () {
       // await uncutsTradingCard.setPause(true)
 
       await expect( uncutsTradingCard.connect(otherAccount).setPause(true)).to.be.rejectedWith(uncutsTradingCard, 'OwnableUnauthorizedAccount');
+
+    });
+
+    it("Should set the right base price points", async function () {
+
+      const { uncutsTradingCard } = await loadFixture(deployTradingCardFixture);
+
+      expect(await uncutsTradingCard.getBasePricePoints()).to.equal(basePrice);
 
     });
     
