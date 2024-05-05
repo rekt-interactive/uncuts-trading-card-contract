@@ -543,7 +543,7 @@ contract UncutsTradingCard is ERC1155, Ownable {
         // Update total supply
         supply = _totalSupply[id] = _totalSupply[id] += amount;
 
-        nextCardBuyPrice = getBuyPrice(id, supply + 1);
+        nextCardBuyPrice = getBuyPrice(id, 1);
 
         emit Buy(
             msg.sender,
@@ -625,7 +625,7 @@ contract UncutsTradingCard is ERC1155, Ownable {
         // mint tokens
         _burn(msg.sender, id, amount);
 
-        nextCardBuyPrice = getBuyPrice(id, supply + 1);
+        nextCardBuyPrice = getBuyPrice(id, 1);
 
         emit Sell(
             msg.sender,
