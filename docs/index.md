@@ -87,7 +87,7 @@ uint256 epoch
 ### payToken
 
 ```solidity
-contract IERC20 payToken
+contract ERC20Votes payToken
 ```
 
 ### epochFinish
@@ -264,7 +264,7 @@ Ensures that the caller is the admin.
 ### constructor
 
 ```solidity
-constructor(string _name, string _symbol, string metadataBaseUrlPrefix, string metadataBaseUrlSuffix, contract IERC20 _payToken, uint128 _BASE_PRICE_POINTS) public
+constructor(string _name, string _symbol, string metadataBaseUrlPrefix, string metadataBaseUrlSuffix, contract ERC20Votes _payToken, uint128 _BASE_PRICE_POINTS) public
 ```
 
 UncutsTradingCard constructor
@@ -277,7 +277,7 @@ UncutsTradingCard constructor
 | _symbol | string | Symbol of the contract token |
 | metadataBaseUrlPrefix | string | Prefix of the metadata base url |
 | metadataBaseUrlSuffix | string | Suffix of the metadata base url |
-| _payToken | contract IERC20 | Address of the pay token |
+| _payToken | contract ERC20Votes | Address of the pay token |
 | _BASE_PRICE_POINTS | uint128 | Base price points |
 
 ### uri
@@ -791,4 +791,20 @@ Get card release supply
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | uint256 | supply of cards for provided id |
+
+### delegate
+
+```solidity
+function delegate(address delegatee) external
+```
+
+Function to delegate votes (preserving lose of voting power)
+
+_this function should only be called by the owner_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| delegatee | address | address of delegatee |
 

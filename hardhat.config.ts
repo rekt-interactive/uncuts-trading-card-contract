@@ -55,7 +55,7 @@ const config: HardhatUserConfig = {
     },
   },
   docgen: {
-    exclude: ['PayToken.sol']
+    exclude: ['PayToken.sol'],
   },
   networks: {
     base: {
