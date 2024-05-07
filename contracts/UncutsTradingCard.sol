@@ -91,6 +91,7 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
     /// @param prizePoolFee  absolute amount of tokens transferred to prize pool
     /// @param authorFee  absolute amount of tokens paid to author
     /// @param totalSupply result total supply of card release after purchased
+    /// @param nextCardBuyPrice purchase price of one next card after incremented supply
     event Buy(
         address payer,
         address holder,
@@ -100,7 +101,8 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
         uint256 protocolFee,
         uint256 prizePoolFee,
         uint256 authorFee,
-        uint256 totalSupply
+        uint256 totalSupply,
+        uint256 nextCardBuyPrice
     );
 
     /// Sell Event Emitted on every card sell
@@ -113,6 +115,7 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
     /// @param prizePoolFee  absolute amount of tokens transferred to prize pool
     /// @param authorFee  absolute amount of tokens paid to author
     /// @param totalSupply result total supply of card release after selled
+    /// @param nextCardBuyPrice purchase price of one next card after decremented supply
     event Sell(
         address payer,
         address holder,
@@ -122,7 +125,8 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
         uint256 protocolFee,
         uint256 prizePoolFee,
         uint256 authorFee,
-        uint256 totalSupply
+        uint256 totalSupply,
+        uint256 nextCardBuyPrice
     );
 
     /// Batch Metadata Update Event (Needed to update metadata in time)
@@ -500,6 +504,7 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
     /// Buy card function
     /// @param _to wallet address of card receiver
     /// @param id card release ID
+    /// @param authorAddress wallet address of card release author (needed to prevent block reorganisation bug), should not be zero address
     /// @param amount amount of cards
     /// @param maxSpentLimit max amount of paytoken to spend (slippage)
     /// @dev this method should only called if contract is not paused
@@ -507,6 +512,7 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
     /// @dev sender should have enough paytoken balance and allowance
     function buy(
         address _to,
+        address authorAddress,
         uint256 id,
         uint256 amount,
         uint256 maxSpentLimit
@@ -518,9 +524,19 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
             uint256 price,
             uint256 protocolFee,
             uint256 prizePoolFee,
-            uint256 authorFee
+            uint256 authorFee,
+            uint256 nextCardBuyPrice
         )
     {
+        require(authorAddress != address(0), "Invalid card author address");
+
+        address tokenAuthor = _tokenAuthors[id];
+
+        require(
+            tokenAuthor == authorAddress,
+            "Author has not card release with provided ID"
+        );
+
         uint256 supply = _totalSupply[id];
         require(supply > 0, "Card not released");
         require(amount > 0, "Minimum amount is 1");
@@ -542,22 +558,20 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
         // mint tokens
         _mint(_to, id, amount, "");
 
-        address tokenAuthor = _tokenAuthors[id];
-
         payToken.safeTransferFrom(msg.sender, address(this), price);
         payToken.safeTransferFrom(msg.sender, tokenAuthor, authorFee);
-
         payToken.safeTransferFrom(
             msg.sender,
             protocolFeeDestination,
             protocolFee
         );
-
         payToken.safeTransferFrom(
             msg.sender,
             prizePoolFeeDestination,
             prizePoolFee
         );
+
+        nextCardBuyPrice = getBuyPrice(id, 1);
 
         emit Buy(
             msg.sender,
@@ -568,7 +582,8 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
             protocolFee,
             prizePoolFee,
             authorFee,
-            supply
+            supply,
+            nextCardBuyPrice
         );
     }
 
@@ -594,7 +609,8 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
             uint256 price,
             uint256 protocolFee,
             uint256 prizePoolFee,
-            uint256 authorFee
+            uint256 authorFee,
+            uint256 nextCardBuyPrice
         )
     {
         uint256 supply = _totalSupply[id];
@@ -624,13 +640,15 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
 
         address tokenAuthor = _tokenAuthors[id];
 
-        // mint tokens
+        // burn tokens
         _burn(msg.sender, id, amount);
 
         payToken.safeTransfer(_to, price);
         payToken.safeTransfer(tokenAuthor, authorFee);
         payToken.safeTransfer(protocolFeeDestination, protocolFee);
         payToken.safeTransfer(prizePoolFeeDestination, prizePoolFee);
+
+        nextCardBuyPrice = getBuyPrice(id, 1);
 
         emit Sell(
             msg.sender,
@@ -641,7 +659,8 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
             protocolFee,
             prizePoolFee,
             authorFee,
-            supply
+            supply,
+            nextCardBuyPrice
         );
     }
 

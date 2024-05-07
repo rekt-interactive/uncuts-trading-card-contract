@@ -139,7 +139,7 @@ describe("UncutsTradingCard", function () {
 
       // await uncutsTradingCard.setPause(true)
 
-      await expect( uncutsTradingCard.connect(otherAccount).setPause(true)).to.be.rejectedWith(uncutsTradingCard, 'OwnableUnauthorizedAccount');
+      await expect( uncutsTradingCard.connect(otherAccount).setPause(true)).to.be.rejectedWith('OwnableUnauthorizedAccount');
 
     });
 
@@ -163,7 +163,7 @@ describe("UncutsTradingCard", function () {
         protocolReleaseCardFee
       } = await loadFixture(deployTradingCardFixture);
 
-      await expect(uncutsTradingCard.connect(otherAccount).releaseCard()).to.be.rejectedWith(uncutsTradingCard, 'TradingCard__PublicReleaseDisabled');
+      await expect(uncutsTradingCard.connect(otherAccount).releaseCard()).to.be.rejectedWith('TradingCard__PublicReleaseDisabled');
 
     });
 
@@ -178,7 +178,7 @@ describe("UncutsTradingCard", function () {
 
       await uncutsTradingCard.setPublicReleaseStatus(true)
       
-      await expect(uncutsTradingCard.connect(otherAccount).releaseCard()).to.be.rejectedWith(uncutsTradingCard, 'ERC20InsufficientAllowance');
+      await expect(uncutsTradingCard.connect(otherAccount).releaseCard()).to.be.rejectedWith('ERC20InsufficientAllowance');
 
     });
 
@@ -195,7 +195,7 @@ describe("UncutsTradingCard", function () {
 
       await payToken.connect(otherAccount).approve(uncutsTradingCard.target, BigInt(Number(protocolReleaseCardFee)*2))
       
-      await expect(uncutsTradingCard.connect(otherAccount).releaseCard()).to.be.rejectedWith(uncutsTradingCard, 'ERC20InsufficientBalance');
+      await expect(uncutsTradingCard.connect(otherAccount).releaseCard()).to.be.rejectedWith('ERC20InsufficientBalance');
 
     });
 
@@ -251,9 +251,13 @@ describe("UncutsTradingCard", function () {
       
       const priceWithFeesFiveCards = await uncutsTradingCard.getBuyPriceAfterFee(1,5);
       const priceWithoutFeesFiveCards = await uncutsTradingCard.getBuyPrice(1,5);
+      const oldBalance =   await payToken.balanceOf(uncutsTradingCard.target);
+
+      console.log('priceWithFeesFiveCards', oldBalance, priceWithoutFeesFiveCards)
       
-      await payToken.approve(uncutsTradingCard.target, priceWithFeesFiveCards)
-      await uncutsTradingCard.buy(otherAccount.address, 1, 5, priceWithFeesFiveCards)
+      await payToken.approve(uncutsTradingCard.target, priceWithFeesFiveCards * BigInt(2))
+
+      await uncutsTradingCard.buy(otherAccount.address,otherAccount.address, 1, 5, priceWithFeesFiveCards)
 
       // Uncuts contract balance equals the amount paid by the previous purchase of 5 cards.
       // These are the funds that are going to be drained.
@@ -273,17 +277,36 @@ describe("UncutsTradingCard", function () {
   ///////////////////////////
   describe("Buy Cards", function () {
 
-    it("Should fail if Card not released yet", async function () {
+    it("Should fail if card not released yet or wrong author provided", async function () {
 
       const { 
         uncutsTradingCard, 
         otherAccount, 
-        protocolReleaseCardFee
+        thirdAccount,
+        protocolReleaseCardFee,
+        payToken
       } = await loadFixture(deployTradingCardFixture);
+
+      //release card 1 to address A
+      await expect(uncutsTradingCard.releaseCardTo(otherAccount.address)).to.not.be.rejected;
+
+      //release card 2 to address B
+      await expect(uncutsTradingCard.releaseCardTo(thirdAccount.address)).to.not.be.rejected;
+
+
+      //release card 3 to address A
+      await expect(uncutsTradingCard.releaseCardTo(otherAccount.address)).to.not.be.rejected;
 
       let price = await uncutsTradingCard.getBuyPriceAfterFee(1, 1);
 
-      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, 1, 1, price)).to.be.rejectedWith("Card not released");
+      await payToken.transfer(otherAccount.address, BigInt(Number(price)*10))
+
+      await payToken.connect(otherAccount).approve(uncutsTradingCard.target, price)
+
+      //try to buy card 1 from author B
+      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, thirdAccount.address, 1, 1, price)).to.be.rejectedWith("Author has not card release with provided ID");
+      //try to buy card 3 from author B
+      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, thirdAccount.address, 3, 1, price)).to.be.rejectedWith("Author has not card release with provided ID");
 
     });
 
@@ -299,7 +322,7 @@ describe("UncutsTradingCard", function () {
 
       const price = await uncutsTradingCard.getBuyPriceAfterFee(1, 1);
 
-      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, 1, 0, price)).to.be.rejectedWith("Minimum amount is 1");
+      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, otherAccount.address, 1, 0, price)).to.be.rejectedWith("Minimum amount is 1");
 
     });
 
@@ -323,7 +346,7 @@ describe("UncutsTradingCard", function () {
 
       await payToken.connect(otherAccount).approve(uncutsTradingCard.target, priceWithFees)
 
-      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, 1,1,priceWithFees)).to.be.rejectedWith('ERC20InsufficientBalance');
+      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, otherAccount.address, 1,1,priceWithFees)).to.be.rejectedWith('ERC20InsufficientBalance');
 
     });
 
@@ -350,9 +373,9 @@ describe("UncutsTradingCard", function () {
 
       await payToken.connect(otherAccount).approve(uncutsTradingCard.target, BigInt(Number(priceWithFees)*10))
 
-      await uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, 1,1,priceWithFees)
+      await uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, otherAccount.address, 1,1,priceWithFees)
 
-      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, 1,1,priceWithFees)).to.be.rejectedWith('Price is too high');
+      await expect(uncutsTradingCard.connect(otherAccount).buy(otherAccount.address, otherAccount.address, 1,1,priceWithFees)).to.be.rejectedWith('Price is too high');
 
     });
 
@@ -375,7 +398,7 @@ describe("UncutsTradingCard", function () {
 
       await payToken.approve(uncutsTradingCard.target, priceWithFees)
 
-      expect(await uncutsTradingCard.buy(otherAccount.address, 1, 1, priceWithFees))
+      expect(await uncutsTradingCard.buy(otherAccount.address, otherAccount.address, 1, 1, priceWithFees))
       .to.emit(uncutsTradingCard, 'Buy');
 
       const price2 = await uncutsTradingCard.getBuyPrice(1,1);
@@ -415,7 +438,7 @@ describe("UncutsTradingCard", function () {
 
         try {
           await payToken.approve(uncutsTradingCard.target, priceWithFees)
-          await uncutsTradingCard.buy(otherAccount.address, 1, buy_count, priceWithFees)
+          await uncutsTradingCard.buy(otherAccount.address, otherAccount.address, 1, buy_count, priceWithFees)
         } catch (error) {
           console.log(error)
         }
@@ -456,7 +479,7 @@ describe("UncutsTradingCard", function () {
 
         try {
           await payToken.approve(uncutsTradingCard.target, priceWithFees)
-          await uncutsTradingCard.buy(otherAccount.address, 1, buy_count, priceWithFees)
+          await uncutsTradingCard.buy(otherAccount.address,otherAccount.address, 1, buy_count, priceWithFees)
         } catch (error) {
           console.log(error)
         }
@@ -497,7 +520,7 @@ describe("UncutsTradingCard", function () {
 
         try {
           await payToken.approve(uncutsTradingCard.target, priceWithFees)
-          await uncutsTradingCard.buy(otherAccount.address, 1, buy_count, priceWithFees)
+          await uncutsTradingCard.buy(otherAccount.address,otherAccount.address, 1, buy_count, priceWithFees)
         } catch (error) {
           console.log(error)
         }
@@ -568,7 +591,7 @@ describe("UncutsTradingCard", function () {
         await payToken.approve(uncutsTradingCard.target, priceWithFees * BigInt(2))
 
         // let mintPriceWithFees = await uncutsTradingCard.connect(thirdAccount).getBuyPriceAfterFee(i, 1);
-        await uncutsTradingCard.buy(thirdAccount.address, i, 1, priceWithFees);
+        await uncutsTradingCard.buy(thirdAccount.address,otherAccount.address, i, 1, priceWithFees);
 
       }
       
@@ -588,7 +611,7 @@ describe("UncutsTradingCard", function () {
 
       // console.log(formatEther(mintPrice), formatEther(mintPriceWithFees), protocolTradeCardFeePercent)
 
-      await expect(uncutsTradingCard.connect(thirdAccount).buy(thirdAccount.address, 1, 5, priceWithFees)).to.changeTokenBalances(
+      await expect(uncutsTradingCard.connect(thirdAccount).buy(thirdAccount.address,otherAccount.address, 1, 5, priceWithFees)).to.changeTokenBalances(
         payToken,
         [
           owner, 
@@ -663,7 +686,7 @@ describe("UncutsTradingCard", function () {
 
       // console.log(formatEther(mintPrice), formatEther(mintPriceWithFees) * 2800, protocolTradeCardFeePercent)
 
-      await uncutsTradingCard.connect(thirdAccount).buy(thirdAccount.address, 1, card_count,buyPriceWithFees);
+      await uncutsTradingCard.connect(thirdAccount).buy(thirdAccount.address,otherAccount.address, 1, card_count,buyPriceWithFees);
 
       const sellPriceAfterFees = await uncutsTradingCard.getSellPriceAfterFee(1, card_count/2);
       const sellPrice = await uncutsTradingCard.getSellPrice(1, card_count/2);
@@ -711,7 +734,7 @@ describe("UncutsTradingCard", function () {
       const buyPriceWithFees = await uncutsTradingCard.connect(thirdAccount).getBuyPriceAfterFee(1, card_count);
 
       await payToken.approve(uncutsTradingCard.target, buyPriceWithFees * BigInt(2))
-      await uncutsTradingCard.buy(owner.address, 1, card_count,buyPriceWithFees);
+      await uncutsTradingCard.buy(owner.address,otherAccount.address, 1, card_count,buyPriceWithFees);
 
 
 
@@ -722,7 +745,7 @@ describe("UncutsTradingCard", function () {
 
       // console.log(formatEther(mintPrice), formatEther(mintPriceWithFees) * 2800, protocolTradeCardFeePercent)
 
-      await uncutsTradingCard.connect(thirdAccount).buy(thirdAccount.address, 1, card_count,nextBuyPriceWithFees);
+      await uncutsTradingCard.connect(thirdAccount).buy(thirdAccount.address,otherAccount.address, 1, card_count,nextBuyPriceWithFees);
 
       const sellPrice = await uncutsTradingCard.getSellPriceAfterFee(1, card_count*2);
 
@@ -752,7 +775,7 @@ describe("UncutsTradingCard", function () {
       await payToken.connect(owner).transfer(thirdAccount.address, firstBuyPriceWithFees)
       await payToken.connect(thirdAccount).approve(uncutsTradingCard.target, firstBuyPriceWithFees * BigInt(2))
 
-      await uncutsTradingCard.connect(thirdAccount).buy(thirdAccount.address, 1, first_buy_count,firstBuyPriceWithFees);
+      await uncutsTradingCard.connect(thirdAccount).buy(thirdAccount.address,otherAccount.address, 1, first_buy_count,firstBuyPriceWithFees);
 
 
       const next_card_count = 5
@@ -761,7 +784,7 @@ describe("UncutsTradingCard", function () {
       await payToken.connect(owner).transfer(fourthAccount.address, nextBuyPriceWithFees)
 
       await payToken.connect(fourthAccount).approve(uncutsTradingCard.target, nextBuyPriceWithFees * BigInt(2))
-      await uncutsTradingCard.connect(fourthAccount).buy(fourthAccount.address, 1, next_card_count,nextBuyPriceWithFees);
+      await uncutsTradingCard.connect(fourthAccount).buy(fourthAccount.address,otherAccount.address, 1, next_card_count,nextBuyPriceWithFees);
 
       const sellPrice = await uncutsTradingCard.getSellPriceAfterFee(1, 2);
 
@@ -874,7 +897,7 @@ describe("UncutsTradingCard", function () {
 
         await payToken.approve(uncutsTradingCard.target, priceWithFees)
   
-        expect(await uncutsTradingCard.buy(otherAccount.address, 1, 1, priceWithFees))
+        expect(await uncutsTradingCard.buy(otherAccount.address, otherAccount.address, 1, 1, priceWithFees))
         .to.emit(uncutsTradingCard, 'Buy');
 
 
