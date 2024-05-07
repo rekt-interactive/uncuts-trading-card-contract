@@ -36,7 +36,7 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
     mapping(uint256 => uint256) private _totalSupply;
 
     /// @dev The initial price of card in paytoken
-    uint128 private BASE_PRICE_POINTS = 1000;
+    uint256 private BASE_PRICE_POINTS = 1000 * 1 ether;
 
     /// @dev Admin has permission to release cards
     address private _admin = msg.sender;
@@ -46,8 +46,8 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
     string private _contractMetadataUrl = "";
 
     //public vars
-    /// @notice absolute amount of eth required to mint first card (only for public release)
-    uint256 public protocolReleaseCardFee = 0.005 ether;
+    /// @notice absolute amount of paytoken required to release a card (only for public release)
+    uint256 public protocolReleaseCardFee = 5000 * 1 ether;
 
     /// @notice protocol fee for every trade in hundred thousand points. 2500 === 0.025 === 2.5%
     uint32 public protocolTradeCardFeePercent = 2500;
@@ -180,7 +180,7 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
         string memory metadataBaseUrlPrefix,
         string memory metadataBaseUrlSuffix,
         ERC20Votes _payToken,
-        uint128 _BASE_PRICE_POINTS
+        uint256 _BASE_PRICE_POINTS
     ) Ownable(msg.sender) ERC1155("") {
         name = _name;
         symbol = _symbol;
@@ -222,6 +222,15 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
      */
     function contractURI() public view returns (string memory) {
         return _contractMetadataUrl;
+    }
+
+    /**
+     * @notice Returns base price points var
+     * @return uint256 base paytoken amount, used to calculate bonding curve price
+     * @dev base price points cannot be changed after deploy, because it will brake price logic for all previous operations
+     */
+    function getBasePricePoints() public view returns (uint256) {
+        return BASE_PRICE_POINTS;
     }
 
     /// @notice Sets the protocol public release card fee in eth value
@@ -427,7 +436,7 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
             ? 0
             : getBondingCurvePrice(supply - 1 + amount);
         uint256 summation = (sum2 - sum1);
-        return summation * 1 ether;
+        return summation;
     }
 
     /// Get buy price of cards
