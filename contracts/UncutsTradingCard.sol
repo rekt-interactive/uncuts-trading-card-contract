@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -17,7 +17,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  */
 contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
     using Strings for uint256;
-    using SafeERC20 for IERC20;
+    using SafeERC20 for ERC20Votes;
 
     /// @notice Trading Card Token name
     string public name = "TradingCard";
@@ -68,7 +68,7 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
 
     uint256 public epoch = 1;
 
-    IERC20 public payToken;
+    ERC20Votes public payToken;
 
     uint256 public epochFinish = block.timestamp + EPOCH_DURATION;
 
@@ -179,7 +179,7 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
         string memory _symbol,
         string memory metadataBaseUrlPrefix,
         string memory metadataBaseUrlSuffix,
-        IERC20 _payToken,
+        ERC20Votes _payToken,
         uint128 _BASE_PRICE_POINTS
     ) Ownable(msg.sender) ERC1155("") {
         name = _name;
@@ -188,6 +188,9 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
         _metadataBaseUrlSuffix = metadataBaseUrlSuffix;
         payToken = _payToken;
         BASE_PRICE_POINTS = _BASE_PRICE_POINTS;
+
+        ///@notice Set contract address as vote delegatee by default
+        payToken.delegate(address(this));
     }
 
     /**
@@ -654,5 +657,14 @@ contract UncutsTradingCard is ERC1155, Ownable, ReentrancyGuard {
     /// @return supply of cards for provided id
     function getReleaseSupply(uint256 releaseId) public view returns (uint256) {
         return _totalSupply[releaseId];
+    }
+
+    ///ERC20 votes section
+
+    /// @notice Function to delegate votes (preserving lose of voting power)
+    /// @param delegatee address of delegatee
+    /// @dev this function should only be called by the owner
+    function delegate(address delegatee) external onlyOwner {
+        payToken.delegate(delegatee);
     }
 }

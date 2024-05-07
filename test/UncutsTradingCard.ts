@@ -818,5 +818,74 @@ describe("UncutsTradingCard", function () {
   })
 
   
+  describe('PayToken votes', function () {
+
+
+
+
+
+    it('should delegate votes', async function () {
+
+      const { 
+        uncutsTradingCard, 
+        payToken,
+        otherAccount, 
+        thirdAccount,
+        owner
+      } = await loadFixture(deployTradingCardFixture);
+
+      const delegateeAddress = await thirdAccount.getAddress();
+      await uncutsTradingCard.delegate(delegateeAddress);
+      const actualDelegatee = await payToken.delegates(uncutsTradingCard.getAddress());
+      console.log(actualDelegatee, delegateeAddress)
+      expect(actualDelegatee).to.equal(delegateeAddress);
+
+    });
+  
+    it('should get current votes', async function () {
+
+      const { 
+        uncutsTradingCard, 
+        payToken,
+        otherAccount, 
+        thirdAccount,
+        owner
+      } = await loadFixture(deployTradingCardFixture);
+
+      expect(await uncutsTradingCard.releaseCardTo(otherAccount.address))
+      .to.emit(uncutsTradingCard, 'ReleaseCard');
+
+      const contractAddress = await uncutsTradingCard.getAddress();
+
+      // const delegateeAddress = await thirdAccount.getAddress();
+      // await uncutsTradingCard.delegate(contractAddress);
+
+      for (let i = 0; i < 6; i++) {
+
+        const priceWithFees = await uncutsTradingCard.getBuyPriceAfterFee(1,1);
+
+        await payToken.approve(uncutsTradingCard.target, priceWithFees)
+  
+        expect(await uncutsTradingCard.buy(otherAccount.address, 1, 1, priceWithFees))
+        .to.emit(uncutsTradingCard, 'Buy');
+
+
+
+      }
+
+      await time.increase(7 * 24 * 60 * 61);
+
+      const checkpoints = await payToken.numCheckpoints(contractAddress);
+
+      console.log(checkpoints)
+
+      const votes = await payToken.balanceOf(contractAddress)
+      // await payToken.permit(account, votes);
+      const currentVotes = await payToken.getVotes(contractAddress);
+      console.log(currentVotes, votes)
+      expect(currentVotes).to.equal(votes);
+    });
+
+  })
 
 })
